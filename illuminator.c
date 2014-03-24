@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#include <wiringPi.h>
 #include <wiringPiSPI.h>
 
 #include "illuminator.h"
@@ -16,6 +17,9 @@
 #define ERA_IOCON  0x0A
 #define ERA_IODIRA 0x00
 #define EPA_GPIOA  0x12
+
+// gpio reset pin
+#define GPIO_RESET 25
 
 uint16_t led2ic2[] = {
 	0x0001, // a0
@@ -87,21 +91,22 @@ int spiWrite(uint8_t *data, int length) {
 }
 
 int configureExpanders() {
-	// write the IOCON register separate for the two ICs
-	spiBuffer[0] = EOV_START | EOV_IC1_ADDR;
-	spiBuffer[1] = ERA_IOCON;
-	spiBuffer[2] = 0x28; // BANK=0; MIRROR=0; SEQOP=1; DISSLW=0; HAEN=1; ODR=0; INTPOL=0; UNUSED=0;
-	if(spiWrite(spiBuffer, 3) != 3) return -1;
-	spiBuffer[0] = EOV_START | EOV_IC2_ADDR;
-	if(spiWrite(spiBuffer, 3) != 3) return -1;
+	// reset
+	pinMode(GPIO_RESET, OUTPUT);
+	digitalWrite (GPIO_RESET, LOW) ;
+	usleep(5);
+	digitalWrite (GPIO_RESET, HIGH) ;
 	// write the IODIR registers sequential
-	spiBuffer[0] = EOV_START | EOV_IC1_ADDR;
+	spiBuffer[0] = EOV_START;
 	spiBuffer[1] = ERA_IODIRA;
 	spiBuffer[2] = 0x00;
 	spiBuffer[3] = 0x00;
-	if(spiWrite(spiBuffer, 4) != 4) return -1;
-	spiBuffer[0] = EOV_START | EOV_IC2_ADDR;
-	if(spiWrite(spiBuffer, 4) != 4) return -1;
+	if(spiWrite(spiBuffer, 4) != 4) return -1; // this will configure both ICs
+	// write the IOCON register
+	spiBuffer[0] = EOV_START;
+	spiBuffer[1] = ERA_IOCON;
+	spiBuffer[2] = 0x28; // BANK=0; MIRROR=0; SEQOP=1; DISSLW=0; HAEN=1; ODR=0; INTPOL=0; UNUSED=0;
+	if(spiWrite(spiBuffer, 3) != 3) return -1; // this will configure both ICs
 	return 0;
 }
 
