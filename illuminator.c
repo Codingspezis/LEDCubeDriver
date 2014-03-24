@@ -65,14 +65,17 @@ uint8_t spiBuffer[4];
 uint8_t *cubeState;
 
 int spiFD;
-int initSpi() {
+int init() {
 	int i;
 	cubeState = (uint8_t *)malloc(16);
 	for(i=0; i<16; i++) {
 		cubeState[i] = 0x00;
 	}
-	spiFD = wiringPiSPISetup(0, 8000000);
-	return spiFD;
+	if(wiringPiSetup() != -1) {
+	        pinMode(GPIO_RESET, OUTPUT);
+		return wiringPiSPISetup(0, 8000000);
+	}
+	return -1;
 }
 
 int spiWrite(uint8_t *data, int length) {
@@ -81,21 +84,13 @@ int spiWrite(uint8_t *data, int length) {
 		return -1;
 	}
 	return length;
-	/*
-	if(length != fwrite(data, 1, length , spiDev)) {
-		printf("ERROR: SPI communication failed\n");
-		return -1;
-	}
-	return length;
-	*/
 }
 
 int configureExpanders() {
 	// reset
-	pinMode(GPIO_RESET, OUTPUT);
-	digitalWrite (GPIO_RESET, LOW) ;
+	digitalWrite(GPIO_RESET, LOW);
 	usleep(5);
-	digitalWrite (GPIO_RESET, HIGH) ;
+	digitalWrite(GPIO_RESET, HIGH);
 	// write the IODIR registers sequential
 	spiBuffer[0] = EOV_START;
 	spiBuffer[1] = ERA_IODIRA;

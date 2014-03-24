@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-int initSpi();
+int init();
 void illuminationLoop(int delayUs);
 
 extern uint8_t *cubeState;

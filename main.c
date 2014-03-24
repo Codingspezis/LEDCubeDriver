@@ -19,7 +19,7 @@ static void *communication_thread(void *arg) {
 }
 
 int main(int argc, char **argv) {
-	if(initSpi()!=-1) {
+	if(init()!=-1) {
 		pthread_t thread_ptr;
 		pthread_create(&thread_ptr, NULL, &communication_thread, NULL);
 		printf("starting illumination loop...\n");

@@ -1,6 +1,6 @@
 project_name = LEDCubeDriver
 
-compiler_settings = -O3
+compiler_settings = -Wall -O3
 libraries = -lpthread -lwiringPi
 
 source_files = main.c illuminator.c communicator.c
