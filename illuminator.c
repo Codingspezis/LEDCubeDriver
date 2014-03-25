@@ -19,7 +19,7 @@
 #define EPA_GPIOA  0x12
 
 // gpio reset pin
-#define GPIO_RESET 25
+#define GPIO_RESET 6
 
 uint16_t led2ic2[] = {
 	0x0001, // a0
@@ -60,23 +60,9 @@ uint16_t level2ic1[] = {
 	0x0010  // a4
 };
 
-uint8_t spiBuffer[4];
-
-uint8_t *cubeState;
-
 int spiFD;
-int init() {
-	int i;
-	cubeState = (uint8_t *)malloc(16);
-	for(i=0; i<16; i++) {
-		cubeState[i] = 0x00;
-	}
-	if(wiringPiSetup() != -1) {
-	        pinMode(GPIO_RESET, OUTPUT);
-		return wiringPiSPISetup(0, 8000000);
-	}
-	return -1;
-}
+uint8_t spiBuffer[4];
+uint8_t *cubeState;
 
 int spiWrite(uint8_t *data, int length) {
 	if(length != write(spiFD, data, length)) {
@@ -87,10 +73,6 @@ int spiWrite(uint8_t *data, int length) {
 }
 
 int configureExpanders() {
-	// reset
-	digitalWrite(GPIO_RESET, LOW);
-	usleep(5);
-	digitalWrite(GPIO_RESET, HIGH);
 	// write the IODIR registers sequential
 	spiBuffer[0] = EOV_START;
 	spiBuffer[1] = ERA_IODIRA;
@@ -103,6 +85,28 @@ int configureExpanders() {
 	spiBuffer[2] = 0x28; // BANK=0; MIRROR=0; SEQOP=1; DISSLW=0; HAEN=1; ODR=0; INTPOL=0; UNUSED=0;
 	if(spiWrite(spiBuffer, 3) != 3) return -1; // this will configure both ICs
 	return 0;
+}
+
+int init() {
+	if(wiringPiSetup() != -1) {
+		// reset ICs
+	        pinMode(GPIO_RESET, OUTPUT);
+		digitalWrite(GPIO_RESET, LOW);
+		usleep(5);
+		digitalWrite(GPIO_RESET, HIGH);
+		// configure ICs
+		spiFD = wiringPiSPISetup(0, 8000000);
+		if(spiFD != -1) {
+			configureExpanders();
+			int i;
+			cubeState = (uint8_t *)malloc(16);
+			for(i=0; i<16; i++) {
+				cubeState[i] = 0x00;
+			}
+			return spiFD;
+		}
+	}
+	return -1;
 }
 
 inline void illuminateLevel(int l) {
@@ -131,13 +135,11 @@ inline void illuminateLevel(int l) {
 }
 
 void illuminationLoop(int delayUs) {
-	if(!configureExpanders()) {
-		int i;
-		for(;;) {
-			for(i=0; i<5; i++) {
-				illuminateLevel(i);
-				usleep(delayUs);
-			}
+	int i;
+	for(;;) {
+		for(i=0; i<5; i++) {
+			illuminateLevel(i);
+			usleep(delayUs);
 		}
 	}
 	printf("ERROR: configuration of expanders failed\n");
